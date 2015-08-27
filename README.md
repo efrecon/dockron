@@ -46,9 +46,9 @@ starting and ending the list of `-rules`.
     watchdog:
       image: efrecon/dockron
       restart: always
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock
-    command: >-
+      volumes:
+        - /var/run/docker.sock:/tmp/docker.sock
+      command: >-
         -rules
           "12 */2 * * * *myworker* restart
            13 */2 * * * *myotherworker* restart"
