@@ -24,7 +24,7 @@ proc ::help:dump { { hdr "" } } {
 	puts ""
     }
     puts "NAME:"
-    puts "\t$appname - Docker component command scheduler"
+    puts "\t$appname - Docker container command scheduler"
     puts ""
     puts "USAGE"
     puts "\t${appname}.tcl \[options\]"
