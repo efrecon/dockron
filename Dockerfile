@@ -10,6 +10,7 @@ COPY dockron.tcl /opt/dockron/
 RUN apk add --update-cache socat git && \
     git clone https://github.com/efrecon/docker-client /tmp/docker-client && \
     mv /tmp/docker-client/docker /opt/dockron/docker/ && \
+    apk del git && \
     rm -rf /tmp/docker-client && \
     rm -rf /var/cache/apk/*
 
