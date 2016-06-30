@@ -233,6 +233,7 @@ proc ::check {} {
 		 && [fieldMatch $daymonth $e_daymonth] \
 		 && [fieldMatch $month $e_month] \
 		 && [fieldMatch $dayweek $e_dayweek] } {
+	    docker log DEBUG "Looking for containers which names match $ptn" $appname
 	    foreach c $containers {
 		set id ""
 		if { [dict exists $c Names] } {
