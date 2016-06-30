@@ -5,10 +5,11 @@ set appname [file rootname [file tail [info script]]]
 lappend auto_path [file join $dirname docker]
 
 package require docker
+package require Tcl 8.5
 
 set prg_args {
     -docker    "unix:///var/run/docker.sock" "UNIX socket for connection to docker"
-    -rules     ""   "List of cron specifications for restarting (multiple of 7)"
+    -rules     ""   "List of cron specifications for restarting (multiple of 8)"
     -verbose   INFO "Verbose level"
     -reconnect 5    "Freq. of docker reconnection in sec., <0 to turn off"
     -h         ""   "Print this help and exit"
@@ -226,7 +227,7 @@ proc ::check {} {
     set month [clock format $now -format "%m"]
     set dayweek [clock format $now -format "%w"]
 
-    foreach {e_min e_hour e_daymonth e_month e_dayweek ptn cmd} $DCKRN(-rules) {
+    foreach {e_min e_hour e_daymonth e_month e_dayweek ptn cmd args} $DCKRN(-rules) {
 	if { [fieldMatch $min $e_min] \
 		 && [fieldMatch $hour $e_hour] \
 		 && [fieldMatch $daymonth $e_daymonth] \
@@ -245,8 +246,8 @@ proc ::check {} {
 		}
 		
 		if { $id ne "" } {
-		    docker log NOTICE "Running '$cmd' on container $id" $appname
-		    set val [$DCKRN(docker) $cmd $id]
+		    docker log NOTICE "Running '$cmd' on container $id with arguments: $args" $appname
+		    set val [$DCKRN(docker) $cmd $id {*}$args]
 		    docker log INFO "$cmd returned: $val" $appname
 		}
 	    }
