@@ -249,7 +249,9 @@ proc ::check {} {
 		if { $id ne "" } {
 		    docker log NOTICE "Running '$cmd' on container $id with arguments: $args" $appname
 		    set val [$DCKRN(docker) $cmd $id {*}$args]
-		    docker log INFO "$cmd returned: $val" $appname
+		    if { [string trim $val] ne "" } {
+			docker log INFO "$cmd returned: $val" $appname
+		    }
 		}
 	    }
 	}
