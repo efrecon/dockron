@@ -212,7 +212,7 @@ proc ::check {} {
     global appname
 
     # Get current list of containers
-    if { [catch {$DCKRN(docker) containers} containers] } {
+    if { [catch {$DCKRN(docker) containers all 1} containers] } {
 	if { $DCKRN(-reconnect) >= 0 } {
 	    set when [expr {int($DCKRN(-reconnect)*1000)}]
 	    after $when ::connect
