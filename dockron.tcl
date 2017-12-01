@@ -18,10 +18,10 @@ set prg_args {
 # Dump help based on the command-line option specification and exit.
 proc ::help:dump { { hdr "" } } {
     global appname
-
+    
     if { $hdr ne "" } {
-	puts $hdr
-	puts ""
+        puts $hdr
+        puts ""
     }
     puts "NAME:"
     puts "\t$appname - Docker container command scheduler"
@@ -31,7 +31,7 @@ proc ::help:dump { { hdr "" } } {
     puts ""
     puts "OPTIONS:"
     foreach { arg val dsc } $::prg_args {
-	puts "\t${arg}\t$dsc (default: ${val})"
+        puts "\t${arg}\t$dsc (default: ${val})"
     }
     exit
 }
@@ -40,16 +40,16 @@ proc ::getopt {_argv name {_var ""} {default ""}} {
     upvar $_argv argv $_var var
     set pos [lsearch -regexp $argv ^$name]
     if {$pos>=0} {
-	set to $pos
-	if {$_var ne ""} {
-	    set var [lindex $argv [incr to]]
-	}
-	set argv [lreplace $argv $pos $to]
-	return 1
+        set to $pos
+        if {$_var ne ""} {
+            set var [lindex $argv [incr to]]
+        }
+        set argv [lreplace $argv $pos $to]
+        return 1
     } else {
-	# Did we provide a value to default?
-	if {[llength [info level 0]] == 5} {set var $default}
-	return 0
+        # Did we provide a value to default?
+        if {[llength [info level 0]] == 5} {set var $default}
+        return 0
     }
 }
 
@@ -72,7 +72,7 @@ foreach { arg val dsc } $prg_args {
 for {set eaten ""} {$eaten ne $argv} {} {
     set eaten $argv
     foreach opt [array names DCKRN -*] {
-	::getopt argv $opt DCKRN($opt) $DCKRN($opt)
+        ::getopt argv $opt DCKRN($opt) $DCKRN($opt)
     }
 }
 
@@ -128,55 +128,55 @@ docker log INFO [string trim $startup] $appname
 #	None.
 proc ::fieldMatch { value spec } {
     if { $value != "0" } {
-	regsub "^0" $value "" value
+        regsub "^0" $value "" value
     }
-
+    
     foreach rangeorval [split $spec ","] {
-
-	# Analyse step specification
-	set idx [string first "/" $rangeorval]
-	if { $idx >= 0 } {
-	    set step [string trim \
-			  [string range $rangeorval [expr $idx + 1] end]]
-	    set rangeorval [string trim \
-				[string range $rangeorval 0 [expr $idx - 1]]]
-	} else {
-	    set step 1
-	    set rangeorval [string trim $rangeorval]
-	}
-
-	# Analyse range specification.
-	set values ""
-	set idx [string first "-" $rangeorval]
-	if { $idx >= 0 } {
-	    set minval [string trim \
-			    [string range $rangeorval 0 [expr $idx - 1]]]
-	    if { $minval != "0" } {
-		regsub "^0" $minval "" minval
-	    }
-	    set maxval [string trim \
-			    [string range $rangeorval [expr $idx + 1] end]]
-	    if { $maxval != "0" } {
-		regsub "^0" $maxval "" maxval
-	    }
-	    for { set i $minval } { $i <= $maxval } { incr i $step } {
-		if { $value == $i } {
-		    return 1
-		}
-	    }
-	} else {
-	    if { $rangeorval == "*" } {
-		if { ! [expr int(fmod($value, $step))] } {
-		    return 1
-		}
-	    } else {
-		if { $rangeorval == $value } {
-		    return 1
-		}
-	    }
-	}
+        
+        # Analyse step specification
+        set idx [string first "/" $rangeorval]
+        if { $idx >= 0 } {
+            set step [string trim \
+                    [string range $rangeorval [expr $idx + 1] end]]
+            set rangeorval [string trim \
+                    [string range $rangeorval 0 [expr $idx - 1]]]
+        } else {
+            set step 1
+            set rangeorval [string trim $rangeorval]
+        }
+        
+        # Analyse range specification.
+        set values ""
+        set idx [string first "-" $rangeorval]
+        if { $idx >= 0 } {
+            set minval [string trim \
+                    [string range $rangeorval 0 [expr $idx - 1]]]
+            if { $minval != "0" } {
+                regsub "^0" $minval "" minval
+            }
+            set maxval [string trim \
+                    [string range $rangeorval [expr $idx + 1] end]]
+            if { $maxval != "0" } {
+                regsub "^0" $maxval "" maxval
+            }
+            for { set i $minval } { $i <= $maxval } { incr i $step } {
+                if { $value == $i } {
+                    return 1
+                }
+            }
+        } else {
+            if { $rangeorval == "*" } {
+                if { ! [expr int(fmod($value, $step))] } {
+                    return 1
+                }
+            } else {
+                if { $rangeorval == $value } {
+                    return 1
+                }
+            }
+        }
     }
-
+    
     return 0
 }
 
@@ -186,23 +186,23 @@ proc ::connect {} {
     global appname
     
     if { $DCKRN(docker) ne "" } {
-	catch {$DCKRN(docker) disconnect}
-	set DCKRN(docker) ""
+        catch {$DCKRN(docker) disconnect}
+        set DCKRN(docker) ""
     }
-
+    
     if { [catch {docker connect $DCKRN(-docker)} d] } {
-	docker log WARN "Cannot connect to docker at $DCKRN(-docker): $d" $appname
+        docker log WARN "Cannot connect to docker at $DCKRN(-docker): $d" $appname
     } else {
-	set DCKRN(docker) $d
+        set DCKRN(docker) $d
     }
-
+    
     if { $DCKRN(docker) eq "" } {
-	if { $DCKRN(-reconnect) >= 0 } {
-	    set when [expr {int($DCKRN(-reconnect)*1000)}]
-	    after $when ::connect
-	}
+        if { $DCKRN(-reconnect) >= 0 } {
+            set when [expr {int($DCKRN(-reconnect)*1000)}]
+            after $when ::connect
+        }
     } else {
-	::check
+        ::check
     }
 }
 
@@ -210,55 +210,59 @@ proc ::connect {} {
 proc ::check {} {
     global DCKRN
     global appname
-
+    
     # Get current list of containers
     if { [catch {$DCKRN(docker) containers all 1} containers] } {
-	if { $DCKRN(-reconnect) >= 0 } {
-	    set when [expr {int($DCKRN(-reconnect)*1000)}]
-	    after $when ::connect
-	}
-	return
+        if { $DCKRN(-reconnect) >= 0 } {
+            set when [expr {int($DCKRN(-reconnect)*1000)}]
+            after $when ::connect
+        }
+        return
     }
-
+    
     set now [clock seconds]
     set min [clock format $now -format "%M"]
     set hour [clock format $now -format "%H"]
     set daymonth [clock format $now -format "%e"]
     set month [clock format $now -format "%m"]
     set dayweek [clock format $now -format "%w"]
-
+    
     foreach {e_min e_hour e_daymonth e_month e_dayweek ptn cmd args} $DCKRN(-rules) {
-	if { [fieldMatch $min $e_min] \
-		 && [fieldMatch $hour $e_hour] \
-		 && [fieldMatch $daymonth $e_daymonth] \
-		 && [fieldMatch $month $e_month] \
-		 && [fieldMatch $dayweek $e_dayweek] } {
-	    docker log DEBUG "Looking for containers which names match $ptn" $appname
-	    foreach c $containers {
-		set id ""
-		if { [dict exists $c Names] } {
-		    foreach name [dict get $c Names] {
-			set name [string trimleft $name "/"]
-			if { [string match $ptn $name] } {
-			    set id [dict get $c Id]
-			    break
-			}
-		    }
-		}
-		
-		if { $id ne "" } {
-		    docker log NOTICE "Running '$cmd' on container $id with arguments: $args" $appname
-		    set val [$DCKRN(docker) $cmd $id {*}$args]
-		    if { [string trim $val] ne "" } {
-			docker log INFO "$cmd returned: $val" $appname
-		    }
-		}
-	    }
-	}
+        if { [fieldMatch $min $e_min] \
+                    && [fieldMatch $hour $e_hour] \
+                    && [fieldMatch $daymonth $e_daymonth] \
+                    && [fieldMatch $month $e_month] \
+                    && [fieldMatch $dayweek $e_dayweek] } {
+            docker log DEBUG "Looking for containers which names match $ptn" $appname
+            foreach c $containers {
+                set id ""
+                if { [dict exists $c Names] } {
+                    foreach name [dict get $c Names] {
+                        set name [string trimleft $name "/"]
+                        if { [string match $ptn $name] } {
+                            set id [dict get $c Id]
+                            break
+                        }
+                    }
+                }
+                
+                if { $id ne "" } {
+                    docker log NOTICE "Running '$cmd' on container $id with arguments: $args" $appname
+                    if { [catch {$DCKRN(docker) $cmd $id {*}$args} val] == 0 } {
+                        if { [string trim $val] ne "" } {
+                            docker log INFO "$cmd returned: $val" $appname
+                        }
+                    } else {
+                        docker log WARN "$cmd returned an error: $val"
+                    }
+                }
+            }
+        }
     }
-
+    
     after 60000 ::check
 }
 
 connect;    # Will start checking
 vwait forever
+
