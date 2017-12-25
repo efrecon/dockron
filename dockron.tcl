@@ -211,6 +211,8 @@ proc ::check {} {
     global DCKRN
     global appname
     
+    set start_ms [clock milliseconds]
+    
     # Get current list of containers
     if { [catch {$DCKRN(docker) containers all 1} containers] } {
         if { $DCKRN(-reconnect) >= 0 } {
@@ -260,7 +262,13 @@ proc ::check {} {
         }
     }
     
-    after 60000 ::check
+    # Compute when to check for timers next time (taking care of time elapsed)
+    set elapsed [expr {[clock milliseconds]-$start_ms}]
+    set next [expr {60000-$elapsed}]
+    if { $next < 0 } {
+        set next 0
+    }
+    after $next ::check
 }
 
 connect;    # Will start checking
