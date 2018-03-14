@@ -13,6 +13,8 @@ set prg_args {
     -verbose   INFO "Verbose level"
     -reconnect 5    "Freq. of docker reconnection in sec., <0 to turn off"
     -h         ""   "Print this help and exit"
+    -cert      ""   "Path to certificate when connecting to remote hosts with TLS"
+    -key       ""   "Path to key when connecting to remote hosts with TLS"    
 }
 
 # Dump help based on the command-line option specification and exit.
@@ -92,6 +94,7 @@ for {set eaten ""} {$eaten ne $argv} {} {
         ::getopt argv $opt DCKRN($opt) $DCKRN($opt)
     }
 }
+array set TEMPLATES {}
 
 # Remaining args? Dump help and exit
 if { [llength $argv] > 0 } {
@@ -295,9 +298,10 @@ proc ::connect {} {
         set DCKRN(docker) ""
     }
     
-    if { [catch {docker connect $DCKRN(-docker)} d] } {
+    if { [catch {docker connect $DCKRN(-docker) -cert $DCKRN(-cert) -key $DCKRN(-key)} d] } {
         docker log WARN "Cannot connect to docker at $DCKRN(-docker): $d" $appname
     } else {
+        docker log NOTICE "Connected to Docker daemon at $DCKRN(-docker)"
         set DCKRN(docker) $d
     }
     
@@ -525,6 +529,7 @@ proc ::find { ptn type lst } {
 proc ::cmdexec { cmd args what { id "" } { name "" } } {
     global DCKRN
     global appname
+    global TEMPLATES
 
     if { $cmd eq "" } {
         # When no command is provided, we use the new substitution-based API
@@ -534,28 +539,57 @@ proc ::cmdexec { cmd args what { id "" } { name "" } } {
                                 %docker% $DCKRN(docker) \
                                 %id% $id \
                                 %name% $name]
-        set cmd [string map $substitutions $args]
-        if { [catch $cmd val] == 0 } {
+        # Get content of arguments from external file if it starts with an
+        # arobas.
+        if { [string index $args 0] eq "@" } {
+            set fname [string range $args 1 end]
+            if { ![info exists TEMPLATES($fname)] } {
+                if { [catch {open $fname} fd] == 0 } {
+                    docker log INFO "Reading command template from $fname"
+                    set TEMPLATES($fname) [read $fd]
+                    close $fd
+                } else {
+                    docker log ERROR "Cannot open template file at $fname: $fd"
+                }
+            }
+            if { [info exists TEMPLATES($fname)] } {
+                set args [set TEMPLATES($fname)]
+            }
+        }
+
+        if { [catch [string map $substitutions $args] val] == 0 } {
             if { [string trim $val] ne "" } {
-                docker log INFO "$args returned: $val" $appname
+                docker log INFO "Substituted command returned: $val" $appname
             }
         } else {
-            docker log WARN "$args returned an error: $val"
+            docker log WARN "Substituted command returned an error: $val"
         }
     } else {
         # Old-style interface assumes a command. The identifier of the matching
         # container and all arguments are blindly added to construct a command.
-        if { $id eq "" } {
+        if { $id eq "" && $name eq "" } {
             docker log NOTICE "Running '$cmd' on ${what}s with arguments: $args" $appname
-        } else {
-            docker log NOTICE "Running '$cmd' on $what $id with arguments: $args" $appname
-        }
-        if { [catch {$DCKRN(docker) {*}$cmd {*}$args} val] == 0 } {
-            if { [string trim $val] ne "" } {
-                docker log INFO "$cmd returned: $val" $appname
+            if { [catch {$DCKRN(docker) {*}$cmd {*}$args} val] == 0 } {
+                if { [string trim $val] ne "" } {
+                    docker log INFO "$cmd returned: $val" $appname
+                }
+            } else {
+                docker log WARN "$cmd returned an error: $val" $appname
             }
         } else {
-            docker log WARN "$cmd returned an error: $val" $appname
+            # Pick the name in case we have no id (this will probably only occur
+            # in the case of volumes).
+            if { $id eq "" } {
+                set id $name
+            }
+            docker log NOTICE "Running '$cmd' on $what $id with arguments: $args" $appname
+            if { [catch {$DCKRN(docker) {*}$cmd $id {*}$args} val] == 0 } {
+                if { [string trim $val] ne "" } {
+                    docker log INFO "$cmd returned: $val" $appname
+                }
+            } else {
+                docker log WARN "$cmd returned an error: $val" $appname
+            }
         }
     }
 }
