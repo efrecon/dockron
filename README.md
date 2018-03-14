@@ -123,16 +123,18 @@ safe interpreter.
 ##### Using Templates
 
 When the first character of the arguments is an arobas `@`, all characters after
-the arobas for the path to a template file that will be read once. Its content
-will be substituted each time necessary, as if had come from the arguments and
-is explained in the previous section. Offloading content to a file allows for
-even more complex calls and/or construction, benefiting from the entire
-expressiveness of the Tcl syntax.  For example, creating the following content
-in a file called `test.tcl` and arranging for setting the 8th item of the rule
-list to `@./test.tcl` would arrange to prune away all dangling images.  Note
-that the command makes a direct call to `docker filters`, a helper procedure
-from the Docker Tcl implementation meant to facilitate the construction of JSON
-expressions that should be sent as part of the API query.
+the arobas form the path to a template file that will be read once. Its content
+will be substituted each time necessary, as if it had come from the arguments
+and is explained in the previous section. Offloading content to a file allows
+for even more complex calls and/or construction, benefiting from the entire
+expressiveness of the Tcl syntax.
+
+For example, creating the following content in a file called `test.tcl` and
+arranging for setting the 8th item of the rule list to `@./test.tcl` would
+arrange to prune away all dangling images.  Note that the command makes a direct
+call to `docker filters`, a helper procedure from the Docker Tcl implementation
+meant to facilitate the construction of JSON expressions that should be sent as
+part of the API query.
 
     %cx% image prune -filter [docker filters dangling 1]
 
@@ -154,7 +156,7 @@ of `-rules`.
            13 */2 * * * *myotherworker* restart \"\""
         -verbose INFO
 
-  [2]: <https://docs.docker.com/compose/yml/> "Compose YAML Reference"
+  [2]: <https://docs.docker.com/compose/> "Compose Documentation"
 
 ## Installation and Dependencies
 
