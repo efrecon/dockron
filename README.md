@@ -8,6 +8,13 @@ dependencies).
 
   [1]: <https://github.com/efrecon/docker-client> "Engine API in Tcl"
 
+The rationale for Dockron is to be able to move scheduling (as in time
+scheduling, not container scheduling) into one or several central places.
+Sometimes, you need to schedule tasks that are meaningful to your
+application/stack, and expressing these as a Dockron service (in a compose file,
+for example) is meaningful. Other scenarios are to regularily schedule various
+operations on an entire Swarm.
+
 ## Usage
 
 ### Command-Line
