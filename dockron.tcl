@@ -2,7 +2,7 @@
 
 set dirname [file dirname [file normalize [info script]]]
 set appname [file rootname [file tail [info script]]]
-lappend auto_path [file join $dirname docker]
+lappend auto_path [file join $dirname tockler]
 
 package require docker 0.3;   # API implementation changes happened at this version
 package require Tcl 8.5

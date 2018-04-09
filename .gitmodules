@@ -1,0 +1,3 @@
+[submodule "tockler"]
+	path = tockler
+	url = https://github.com/efrecon/tockler.git
