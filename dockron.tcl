@@ -385,7 +385,7 @@ proc ::findInSpec { ptn lst what {specKey "Spec"} {idKey "ID"} } {
         if { $specKey eq "" } {
             set name [dget $spec Name "Cannot find name of ${what}!"]
         } else {
-            set spec [dget $c $specKey "Cannot find specification for ${what}!"]
+            set spec [dget $s $specKey "Cannot find specification for ${what}!"]
             if { $spec ne "" } {
                 set name [dget $spec Name "Cannot find name of ${what} in specification!"]
             }
