@@ -145,6 +145,20 @@ part of the API query.
 
     %cx% image prune -filter [docker filters dangling 1]
 
+Some operations are easier to execute using the regular `docker` command-line
+client as opposed to through the API, e.g. scaling a service. For these
+usecases, it is possible to use calls to Tcl `exec` to relay identifiers and or
+names to the regular `docker` command-line client. For example, supposing that
+`%name%` matches the name of an existing service, the following line in such a
+template, would arrange to scale the matching service to 3 replicas:
+
+    exec docker service scale %name%=3
+
+If you want to run such operations when `dockron` is run as part of its Docker
+[image][3] you will have to ensure that the `docker` executable is itself
+accessible to the container, e.g. through mounting the executable from the host
+into the container as a volume: `-v /usr/bin/docker:/usr/bin/docker`.
+
 ### Compose
 
 To run Dockron from [compose][2], you would could specify something like the
