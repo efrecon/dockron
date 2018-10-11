@@ -3,7 +3,7 @@ MAINTAINER Emmanuel Frecon <emmanuel@sics.se>
 
 # Ensure we have socat since nc on busybox does not support UNIX
 # domain sockets.
-RUN apk add --no-cache socat libc6-compat
+RUN apk add --no-cache socat libc6-compat libltdl
 
 # COPY code
 COPY *.md /opt/dockron/
