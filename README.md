@@ -6,7 +6,7 @@ but also, networks, (Swarm) nodes, secrets, etc. It relies on the Docker client
 [implementation in Tcl][1] (See the end of this document for how to resolve
 dependencies).
 
-  [1]: <https://github.com/efrecon/docker-client> "Engine API in Tcl"
+  [1]: <https://github.com/efrecon/tockler> "Engine API in Tcl"
 
 The rationale for Dockron is to be able to move scheduling (as in time
 scheduling, not container scheduling) into one or several central places.
@@ -126,6 +126,21 @@ substituted, lead to a valid call to the Tcl Docker API implementation.
 Note that the command formed as such is called directly in the context of the
 executing procedure and there are no security guards, nor execution within a
 safe interpreter.
+
+Sometimes, [tockler][1] is not complete, alternatively makes it complex to
+express what the regular `docker` CLI command makes easier to interface.  In
+those cases, and as long as you remain on the same host, you should be able to
+call the local `docker` binary (usually at `/usr/bin/docker`) using Tcl's [exec]
+command. It is even possible to perform this kind of operation from within the
+Docker container of [dockron][3], provided you mount the docker controlling
+socket at `/var/run/docker.sock` and the binary itself at `/usr/bin/docker` into
+the container. The Dockerfile adds a number of compability packages to the base
+Alpine installation to make it possible to call the `docker` binary from Alpine,
+even if the container runs on, e.g. Ubuntu, and the binary is mounted into the
+container. This is possible because of the minimal dependencies that are present
+in Go binaries.
+
+  [exec]: https://www.tcl.tk/man/tcl/TclCmd/exec.htm
 
 ##### Using Templates
 
