@@ -212,7 +212,7 @@ e.g. (but the following command wouldn't do much...):
 
 ### Directly on the Host
 
-You need to ensure that dockron can access the `docker` under-directory of the
-[engine Tcl implementation][1].  You can either copy the content of the
-directory or arrange for a (symbolic) link. Checkout for how the `Dockerfile`
-solves the dependency for an example.
+`dockron` uses git [submodules], make sure to clone with recursion to arrange
+for accessing the Docker API implementation.
+
+  [submodules]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
