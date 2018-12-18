@@ -557,7 +557,9 @@ proc ::cmdexec { cmd args what { id "" } { name "" } } {
             }
         }
 
-        if { [catch [string map $substitutions $args] val] == 0 } {
+        set cmd [string map $substitutions $args]
+        docker log NOTICE "Running '$cmd' on matching ${what}" $appname
+        if { [catch $cmd val] == 0 } {
             if { [string trim $val] ne "" } {
                 docker log INFO "Substituted command returned: $val" $appname
             }
