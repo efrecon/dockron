@@ -526,7 +526,7 @@ proc ::find { ptn type lst } {
 # Side Effects:
 #      Operate on the Docker host, with great power comes great
 #      responsabilities!!!
-proc ::cmdexec { cmd args what { id "" } { name "" } } {
+proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
     global DCKRN
     global appname
     global TEMPLATES
@@ -558,7 +558,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } } {
         }
 
         set cmd [string map $substitutions $args]
-        docker log NOTICE "Running '$cmd' on matching ${what}" $appname
+        docker log NOTICE "Running '$cmd' on ${what} (matching $ptn)" $appname
         if { [catch $cmd val] == 0 } {
             if { [string trim $val] ne "" } {
                 docker log INFO "Substituted command returned: $val" $appname
@@ -584,7 +584,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } } {
             if { $id eq "" } {
                 set id $name
             }
-            docker log NOTICE "Running '$cmd' on $what $id with arguments: $args" $appname
+            docker log NOTICE "Running '$cmd' on $what $id (matching $ptn) with arguments: $args" $appname
             if { [catch {$DCKRN(docker) {*}$cmd $id {*}$args} val] == 0 } {
                 if { [string trim $val] ne "" } {
                     docker log INFO "$cmd returned: $val" $appname
@@ -626,7 +626,7 @@ proc ::execute { ptn type cmd args lst what } {
     } else {
         foreach {id name} [find $ptn $type $lst] {
             if { $id ne "" } {
-                cmdexec $cmd $args $what $id $name
+                cmdexec $cmd $args $what $id $name $ptn
             }
         }        
     }
