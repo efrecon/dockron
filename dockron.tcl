@@ -9,12 +9,13 @@ package require Tcl 8.5
 
 set prg_args {
     -docker    "unix:///var/run/docker.sock" "UNIX socket for connection to docker"
-    -rules     ""   "List of cron specifications for restarting (multiple of 8)"
-    -verbose   INFO "Verbose level"
-    -reconnect 5    "Freq. of docker reconnection in sec., <0 to turn off"
-    -h         ""   "Print this help and exit"
-    -cert      ""   "Path to certificate when connecting to remote hosts with TLS"
-    -key       ""   "Path to key when connecting to remote hosts with TLS"    
+    -rules     ""     "List of cron specifications for restarting (multiple of 8 when precision is minutes)"
+    -verbose   INFO   "Verbose level"
+    -reconnect 5      "Freq. of docker reconnection in sec., <0 to turn off"
+    -precision "mins" "Precision first matching of seconds, minutes, hours, days."
+    -h         ""     "Print this help and exit"
+    -cert      ""     "Path to certificate when connecting to remote hosts with TLS"
+    -key       ""     "Path to key when connecting to remote hosts with TLS"    
 }
 
 # Dump help based on the command-line option specification and exit.
@@ -301,7 +302,7 @@ proc ::connect {} {
     if { [catch {docker connect $DCKRN(-docker) -cert $DCKRN(-cert) -key $DCKRN(-key)} d] } {
         docker log WARN "Cannot connect to docker at $DCKRN(-docker): $d" $appname
     } else {
-        docker log NOTICE "Connected to Docker daemon at $DCKRN(-docker)"
+        docker log NOTICE "Connected to Docker daemon at $DCKRN(-docker)" $appname
         set DCKRN(docker) $d
     }
     
@@ -545,11 +546,11 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
             set fname [string range $args 1 end]
             if { ![info exists TEMPLATES($fname)] } {
                 if { [catch {open $fname} fd] == 0 } {
-                    docker log INFO "Reading command template from $fname"
+                    docker log INFO "Reading command template from $fname" $appname
                     set TEMPLATES($fname) [read $fd]
                     close $fd
                 } else {
-                    docker log ERROR "Cannot open template file at $fname: $fd"
+                    docker log ERROR "Cannot open template file at $fname: $fd" $appname
                 }
             }
             if { [info exists TEMPLATES($fname)] } {
@@ -564,7 +565,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
                 docker log INFO "Substituted command returned: $val" $appname
             }
         } else {
-            docker log WARN "Substituted command returned an error: $val"
+            docker log WARN "Substituted command returned an error: $val" $appname
         }
     } else {
         # Old-style interface assumes a command. The identifier of the matching
@@ -632,6 +633,97 @@ proc ::execute { ptn type cmd args lst what } {
     }
 }
 
+proc ::rules { sec min hour daymonth month dayweek callback } {
+    global DCKRN
+    global appname    
+
+    switch -nocase -glob -- $DCKRN(-precision) {
+        "s*" {
+            foreach {e_sec e_min e_hour e_daymonth e_month e_dayweek spec cmd args} $DCKRN(-rules) {
+                if { [fieldMatch $sec $e_sec] \
+                        && [fieldMatch $min $e_min] \
+                        && [fieldMatch $hour $e_hour] \
+                        && [fieldMatch $daymonth $e_daymonth] \
+                        && [fieldMatch $month $e_month] \
+                        && [fieldMatch $dayweek $e_dayweek] } {
+                    set type [type $spec ptn]
+                    {*}$callback $type $ptn $cmd $args
+                }
+            }
+        }
+        "m*" {
+            foreach {e_min e_hour e_daymonth e_month e_dayweek spec cmd args} $DCKRN(-rules) {
+                if { [fieldMatch $min $e_min] \
+                        && [fieldMatch $hour $e_hour] \
+                        && [fieldMatch $daymonth $e_daymonth] \
+                        && [fieldMatch $month $e_month] \
+                        && [fieldMatch $dayweek $e_dayweek] } {
+                    set type [type $spec ptn]
+                    {*}$callback $type $ptn $cmd $args
+                }
+            }
+        }
+        "h*" {
+            foreach {e_hour e_daymonth e_month e_dayweek spec cmd args} $DCKRN(-rules) {
+                if { [fieldMatch $hour $e_hour] \
+                        && [fieldMatch $daymonth $e_daymonth] \
+                        && [fieldMatch $month $e_month] \
+                        && [fieldMatch $dayweek $e_dayweek] } {
+                    set type [type $spec ptn]
+                    {*}$callback $type $ptn $cmd $args
+                }
+            }
+        }
+        "d*" {
+            foreach {e_daymonth e_month e_dayweek spec cmd args} $DCKRN(-rules) {
+                if { [fieldMatch $daymonth $e_daymonth] \
+                        && [fieldMatch $month $e_month] \
+                        && [fieldMatch $dayweek $e_dayweek] } {
+                    set type [type $spec ptn]
+                    {*}$callback $type $ptn $cmd $args
+                }
+            }
+        }
+        default {
+            docker log ERROR "$DCRN(-precision) is an unknown precision!" $appname
+        }
+    }
+}
+
+proc ::pick { containers services volumes images nodes secrets configs networks type ptn cmd args } {
+    global DCKRN
+    global appname
+    
+    switch -- $type {
+        "C" {
+            execute $ptn $type $cmd $args $containers "container"
+        }
+        "S" {
+            execute $ptn $type $cmd $args $services "service"
+        }
+        "V" {
+            execute $ptn $type $cmd $args $volumes "volume"
+        }
+        "I" {
+            execute $ptn $type $cmd $args $images "image"
+        }
+        "N" {
+            execute $ptn $type $cmd $args $nodes "node"
+        }
+        "R" {
+            execute $ptn $type $cmd $args $secrets "secret"
+        }
+        "G" {
+            execute $ptn $type $cmd $args $configs "config"
+        }
+        "W" {
+            execute $ptn $type $cmd $args $networks "network"
+        }
+        default {
+            docker log ERROR "$type is an unknown type!" $appname
+        }
+    }
+} 
 
 # ::check -- Timely check and execute command on matching objects
 #
@@ -663,6 +755,7 @@ proc ::check {} {
     # Transform current date/time into the various fields that are relevant for
     # the cron-like date and time specification.
     set now [expr {$start_ms / 1000}]
+    set sec [clock format $now -format "%S"];   # Really superfluous?
     set min [clock format $now -format "%M"]
     set hour [clock format $now -format "%H"]
     set daymonth [clock format $now -format "%e"]
@@ -673,24 +766,20 @@ proc ::check {} {
     # letter representation of Docker object types that should be considered by
     # the subset of the rules that are relevant right now.
     set types [list]
-    foreach {e_min e_hour e_daymonth e_month e_dayweek ptn cmd args} $DCKRN(-rules) {
-        if { [fieldMatch $min $e_min] \
-                    && [fieldMatch $hour $e_hour] \
-                    && [fieldMatch $daymonth $e_daymonth] \
-                    && [fieldMatch $month $e_month] \
-                    && [fieldMatch $dayweek $e_dayweek] } {
-            lappend types [type $ptn]
-        }
-    }
+    rules $sec $min $hour $daymonth $month $dayweek {apply {{type ptn cmd args} {
+        uplevel 2 lappend types $type
+    }}}
+    set types [lsort -unique $types]
 
-    # Get current (relevant) list of containers, services, etc. This uses the
-    # new sub-command based part of the API implementation.  The code
-    # dynamically creates the variables that will hold relevant lists on the
-    # fly. This is done in a deterministic way so this exact set of dynamically
-    # created variables will be used later on. The variables have names that
-    # relates to the type of the object being listed, so we use the variable
-    # names as part of the informational logging text.
-    foreach type [lsort -unique $types] {
+    if { [llength $types] } {
+        # Get current (relevant) list of containers, services, etc. This uses the
+        # new sub-command based part of the API implementation.  The code
+        # dynamically creates the variables that will hold relevant lists on the fly
+        # and ensures that resources that are not necessary lead to an empty list.
+        # This is done in a deterministic way so this exact set of dynamically
+        # created variables will be used later on. The variables have names that
+        # relates to the type of the object being listed, so we use the variable
+        # names as part of the informational logging text.
         foreach {objtype cmd varname} {
             "C" "container ls -all 1" containers
             "S" "service ls" services
@@ -701,74 +790,51 @@ proc ::check {} {
             "G" "config ls" configs
             "W" "network ls" networks
         } {
-            if { $objtype eq $type } {
-                set $varname [list];   # Failsafe
-                docker log DEBUG "Collecting list of $varname" $appname
-                if { [catch {$DCKRN(docker) {*}$cmd} $varname] } {
-                    docker log ERROR "Cannot list $varname!" $appname
-                    if { $DCKRN(-reconnect) >= 0 } {
-                        set when [expr {int($DCKRN(-reconnect)*1000)}]
-                        after $when ::connect
+            set $varname [list];   # Failsafe
+            foreach type $types {
+                if { $objtype eq $type } {
+                    docker log DEBUG "Collecting list of $varname" $appname
+                    if { [catch {$DCKRN(docker) {*}$cmd} $varname] } {
+                        docker log ERROR "Cannot list $varname!" $appname
+                        if { $DCKRN(-reconnect) >= 0 } {
+                            set when [expr {int($DCKRN(-reconnect)*1000)}]
+                            after $when ::connect
+                        }
+                        # Fail early once we have lost the connection, there isn't
+                        # anything that we will be able to do further on anyway.
+                        # Reconnecting will automatically start checking for
+                        # matching rules again by construction.
+                        return
                     }
-                    # Fail early once we have lost the connection, there isn't
-                    # anything that we will be able to do further on anyway.
-                    # Reconnecting will automatically start checking for
-                    # matching rules again by construction.
-                    return
                 }
             }
         }
+
+        # Traverse all the rules and stop by all the ones that match the current
+        # date and time.  Since we have collected the list of relevant Docker
+        # objects earlier on, we can now execute the command and its arguments onto
+        # the objects which name (and type) match the ones collected in the list, if
+        # present. We also have ensured that all those variables exist, being empty
+        # when not relevant.
+        rules $sec $min $hour $daymonth $month $dayweek \
+            [list ::pick $containers $services $volumes $images $nodes $secrets $configs $networks]
     }
 
-    # Traverse all the rules and stop by all the ones that match the current
-    # date and time.  Since we have collected the list of relevant Docker
-    # objects earlier on, we can now execute the command and its arguments onto
-    # the objects which name (and type) match the ones collected in the list, if
-    # present.
-    foreach {e_min e_hour e_daymonth e_month e_dayweek spec cmd args} $DCKRN(-rules) {
-        if { [fieldMatch $min $e_min] \
-                    && [fieldMatch $hour $e_hour] \
-                    && [fieldMatch $daymonth $e_daymonth] \
-                    && [fieldMatch $month $e_month] \
-                    && [fieldMatch $dayweek $e_dayweek] } {
-            set type [type $spec ptn]
-            switch -- $type {
-                "C" {
-                    execute $ptn $type $cmd $args $containers "container"
-                }
-                "S" {
-                    execute $ptn $type $cmd $args $services "service"
-                }
-                "V" {
-                    execute $ptn $type $cmd $args $volumes "volume"
-                }
-                "I" {
-                    execute $ptn $type $cmd $args $images "image"
-                }
-                "N" {
-                    execute $ptn $type $cmd $args $nodes "node"
-                }
-                "R" {
-                    execute $ptn $type $cmd $args $secrets "secret"
-                }
-                "G" {
-                    execute $ptn $type $cmd $args $configs "config"
-                }
-                "W" {
-                    execute $ptn $type $cmd $args $networks "network"
-                }
-            }
-        }
-    }
-    
     # Compute when to check for timers next time (taking care of time elapsed
     # since the very beginning of this procedure)
+    switch -nocase -glob -- $DCKRN(-precision) {
+        "s*" { set every 1 }
+        "m*" { set every 60 }
+        "h*" { set every 3600 }
+        "d*" { set every 86400 }
+        default { docker log ERROR "$DCKRN(-precision) is an unknown precision!" $appname }
+    }
     set elapsed [expr {[clock milliseconds]-$start_ms}]
-    set next [expr {60000-$elapsed}]
+    set next [expr {(1000*$every)-$elapsed}]
     if { $next < 0 } {
         set next 0
     }
-    docker log TRACE "Entities collection and rule checking took $elapsed ms, next check in $next ms"
+    docker log DEBUG "Entities collection and rule checking took $elapsed ms, next check in $next ms" $appname
     after $next ::check
 }
 

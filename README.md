@@ -12,7 +12,7 @@ The rationale for Dockron is to be able to move scheduling (as in time
 scheduling, not container scheduling) into one or several central places.
 Sometimes, you need to schedule tasks that are meaningful to your
 application/stack, and expressing these as a Dockron service (in a compose file,
-for example) is meaningful. Other scenarios are to regularily schedule various
+for example) is meaningful. Other scenarios are to regularly schedule various
 operations on an entire Swarm.
 
 ## Usage
@@ -30,26 +30,56 @@ its options.
 
 The actions to perform on entities are taken from the command-line option
 `-rules`.  Its value should be a white-space separated list of specifications,
-which needs to contain a multiple of 8 items.  The items are taken in turns and
-are interpreted as described below:
+which length depends on the value of the command-line option `-precision`. When
+`-precision` is seconds, the list should contain a multiple of 9 items and The
+items are taken in turns and are interpreted as described below:
 
-1. The minute of the day (see below)
-2. The hour of the day (see below)
-3. The day of the month (see below)
-4. The month number (see below)
-5. The day of the week (see below)
-6. The combination of an entity type and a glob-style pattern to match against
+1. The second of the day (see below)
+2. The minute of the day (see below)
+3. The hour of the day (see below)
+4. The day of the month (see below)
+5. The month number (see below)
+6. The day of the week (see below)
+7. The combination of an entity type and a glob-style pattern to match against
    the name(s) of the entity.  When the type is not explicitely specified, it
    will be considered to target containers.
-7. The command to execute, e.g. `restart`, `pause`, as [available][1] from the
+8. The command to execute, e.g. `restart`, `pause`, as [available][1] from the
    API implementation.
-8. Additional arguments to the command.
+9. Additional arguments to the command.
 
 For all the date and time related specifications, the component controller
 follows the `crontab` conventions, meaning that you should be able to specify
 "any" using `*`, but also intervals such as `0-5,14-18,34`, or "every 3" using
 `*/3`.  The command to execute can be empty, in which case the arguments are
 used in a slightly different way as explained below.
+
+The value of the `-precision` command-line option will influence the number of
+necessary items in the `-rules` list. It is case insensitive and matches on the
+first letter, even though it is advised to specify using the entire word (prefer
+writing `seconds` rather than just `s`). The length of the list in `-rules` will
+vary with the value of `-precision` as follows:
+
+* When the precision is set to `seconds`, i.e. starts with the letter `s`, all 9
+  items need to be present in `-rules`.
+* When the precision is set to `minutes`, i.e. starts with the letter `m`, there
+  should be only 8 items present in `-rules`, starting from #2 above, i.e.
+  minute of the day. This is the *default* and also is how the UNIX `cron`
+  utility works.
+* When the precision is set to `hours`, i.e. starts with the letter `h`, there
+  should be only 7 items present in `-rules`, starting from #3 above, i.e. hour
+  of the day.
+* When the precision is set to `days`, i.e. starts with the letter `d`, there
+  should be only 6 items present in `-rules`, starting from #4 above, i.e. day
+  of the month.
+
+**IMPORTANT NOTE**: `dockron` tries to cope with the time taken for talking to
+the underlying docker daemon. It also tries to minimise the number of calls to
+the API as much as possible. However, collecting relevant lists of resources
+(containers, configs, etc.) and mostly operating on these (e.g. restarting a
+container) takes time and calls are made synchronously. This means that when
+going down to seconds precision, it is highly possible that `dockron` will miss
+clock ticks because operations took too long time to execute. A workaround is to
+write rules that do not overlap over time when executing.
 
 #### Matching Types and Entities
 
