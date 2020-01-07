@@ -15,6 +15,15 @@ application/stack, and expressing these as a Dockron service (in a compose file,
 for example) is meaningful. Other scenarios are to regularly schedule various
 operations on an entire Swarm.
 
+**Note** `dockron` probably does not do exactly what you think it does: In its
+simplest form, it will relay the [tockler][1] API, and not the regular
+command-line `docker` [API][CLI] that you are probably used to. However, given a
+little bit more configuration, you should be also be able to use the [CLI] if
+[tockler][1] is not enough. See [dockron.yml] for an example.
+
+  [CLI]: https://docs.docker.com/engine/reference/commandline/cli/
+  [dockron.yml]: ./dockron.yml
+
 ## Usage
 
 ### Command-Line
@@ -174,12 +183,13 @@ in Go binaries.
 
 ##### Using Templates
 
-When the first character of the arguments is an arobas `@`, all characters after
-the arobas form the path to a template file that will be read once. Its content
-will be substituted each time necessary, as if it had come from the arguments
-and is explained in the previous section. Offloading content to a file allows
-for even more complex calls and/or construction, benefiting from the entire
-expressiveness of the Tcl syntax.
+When the first character of the arguments is an arobas `@`, all characters of
+the first argument after the arobas form the path to a template file that will
+be read once. Its content will be substituted each time necessary, as if it had
+come from the arguments and is explained in the previous section. Additional
+arguments are also substituted and passed further using the `argv` global
+variable. Offloading content to a file allows for even more complex calls and/or
+construction, benefiting from the entire expressiveness of the Tcl syntax.
 
 For example, creating the following content in a file called `test.tcl` and
 arranging for setting the 8th item of the rule list to `@./test.tcl` would
@@ -246,3 +256,34 @@ e.g. (but the following command wouldn't do much...):
 for accessing the Docker API implementation.
 
   [submodules]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
+## Test and Example
+
+The Docker [compose] file [dockron.yml] provides examples of all the various
+command conventions for operating on Docker resource using a dummy container
+called `date-out`. Provided a recent version of Docker [compose], run the file
+using the following command.
+
+```shell
+docker-compose -f dockron.yml up --build
+```
+
+This will create a dummy container called `date-out` that outputs the current
+date and time every seconds and will be restarted using `dockron` running in
+another container. Everytime `date-out` is restarted, [compose] will change the
+colour of the line header to ease recognising that the container is effectively
+restarted. `dockron` is setup to use seconds precision for quicker tests:
+
++ At second 0, the old-style API is used, issuing the command `restart` on the
+  container which names matches the pattern.
++ At second 15, the new-style API is used, issuing a [tockler][1] command once
+  substitution has occured (and the container matching the pattern found).
++ At second 30, the real `docker` binary (mounted as a volume into the
+  container) is called through the Tcl `exec` command. Arguments are substituted
+  prior to execution, making it possible for `%name%` to be replaced with the
+  name of the container that matches the pattern.
++ At second 45, the same happens, but this time through an external script file.
+  Arguments to the script file are substituted and passed further, then picked
+  up again in the file (implementation) as the `::argv` global Tcl variable.
+
+  [compose]: https://docs.docker.com/compose/

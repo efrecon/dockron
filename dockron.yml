@@ -1,26 +1,27 @@
-# WIP: run this with the following command to test:
-# docker-compose -f dockron.yml -p dockron up
+# run this with the following command to test:
+# docker-compose -f dockron.yml up --build
 version: '3.7'
 
 services:
-  geoip:
+  date-out:
     image: busybox
-    init: true
     command: >-
-      wget -q -O- 'http://ip-api.com/csv/?fields=33222655'
+      sh -c "while true; do date; sleep 1; done"
 
   pulse:
     build: .
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /usr/bin/docker:/usr/bin/docker:ro
-      - ./utils/container_restart.tcl:/opt/dockron/utils/container_restart.tcl:ro
+      - ./utils/docker.tcl:/opt/dockron/utils/docker.tcl:ro
     init: true
-    #        */2 * * * * *geoip* restart \"\"
     command: >-
       -docker "unix:///var/run/docker.sock"
+      -precision "seconds"
       -rules
         "
-        * * * * * *geoip* \"\" @/opt/dockron/utils/container_restart.tcl
+        0 * * * * * *date-out* restart \"\"
+        15 * * * * * *date-out* \"\" \"%docker% restart %id%\"
+        30 * * * * * *date-out* \"\" \"exec /usr/bin/docker container restart %name%\"
+        45 * * * * * *date-out* \"\" \"@/opt/dockron/utils/docker.tcl container restart %name%\"
         "
-      -verbose DEBUG

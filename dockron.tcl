@@ -533,6 +533,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
     global TEMPLATES
 
     if { $cmd eq "" } {
+        set argv_backup $::argv;   # Store global arguments
         # When no command is provided, we use the new substitution-based API
         # that is able to form any kind of (sequential) commands, allowing for
         # more complex calls to the underlying API.
@@ -543,7 +544,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
         # Get content of arguments from external file if it starts with an
         # arobas.
         if { [string index $args 0] eq "@" } {
-            set fname [string range $args 1 end]
+            set fname [string range [lindex $args 0] 1 end]
             if { ![info exists TEMPLATES($fname)] } {
                 if { [catch {open $fname} fd] == 0 } {
                     docker log INFO "Reading command template from $fname" $appname
@@ -554,6 +555,9 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
                 }
             }
             if { [info exists TEMPLATES($fname)] } {
+                # Pass remaining arguments, substituted as argv
+                set ::argv [string map $substitutions [lrange $args 1 end]]
+                docker log INFO "Passing substituted arguments to $fname: $::argv"
                 set args [set TEMPLATES($fname)]
             }
         }
@@ -567,6 +571,7 @@ proc ::cmdexec { cmd args what { id "" } { name "" } { ptn "" } } {
         } else {
             docker log WARN "Substituted command returned an error: $val" $appname
         }
+        set ::argv $argv_backup;   # Restore global arguments.
     } else {
         # Old-style interface assumes a command. The identifier of the matching
         # container and all arguments are blindly added to construct a command.
@@ -627,6 +632,7 @@ proc ::execute { ptn type cmd args lst what } {
     } else {
         foreach {id name} [find $ptn $type $lst] {
             if { $id ne "" } {
+        docker log INFO "calling back $id  $cmd $args" $appname
                 cmdexec $cmd $args $what $id $name $ptn
             }
         }        
@@ -647,7 +653,7 @@ proc ::rules { sec min hour daymonth month dayweek callback } {
                         && [fieldMatch $month $e_month] \
                         && [fieldMatch $dayweek $e_dayweek] } {
                     set type [type $spec ptn]
-                    {*}$callback $type $ptn $cmd $args
+                    {*}$callback $type $ptn $cmd {*}$args
                 }
             }
         }
@@ -659,7 +665,7 @@ proc ::rules { sec min hour daymonth month dayweek callback } {
                         && [fieldMatch $month $e_month] \
                         && [fieldMatch $dayweek $e_dayweek] } {
                     set type [type $spec ptn]
-                    {*}$callback $type $ptn $cmd $args
+                    {*}$callback $type $ptn $cmd {*}$args
                 }
             }
         }
@@ -670,7 +676,7 @@ proc ::rules { sec min hour daymonth month dayweek callback } {
                         && [fieldMatch $month $e_month] \
                         && [fieldMatch $dayweek $e_dayweek] } {
                     set type [type $spec ptn]
-                    {*}$callback $type $ptn $cmd $args
+                    {*}$callback $type $ptn $cmd {*}$args
                 }
             }
         }
@@ -680,7 +686,7 @@ proc ::rules { sec min hour daymonth month dayweek callback } {
                         && [fieldMatch $month $e_month] \
                         && [fieldMatch $dayweek $e_dayweek] } {
                     set type [type $spec ptn]
-                    {*}$callback $type $ptn $cmd $args
+                    {*}$callback $type $ptn $cmd {*}$args
                 }
             }
         }
