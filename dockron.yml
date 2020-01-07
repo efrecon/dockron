@@ -1,0 +1,26 @@
+# WIP: run this with the following command to test:
+# docker-compose -f dockron.yml -p dockron up
+version: '3.7'
+
+services:
+  geoip:
+    image: busybox
+    init: true
+    command: >-
+      wget -q -O- 'http://ip-api.com/csv/?fields=33222655'
+
+  pulse:
+    build: .
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - ./utils/container_restart.tcl:/opt/dockron/utils/container_restart.tcl:ro
+    init: true
+    #        */2 * * * * *geoip* restart \"\"
+    command: >-
+      -docker "unix:///var/run/docker.sock"
+      -rules
+        "
+        * * * * * *geoip* \"\" @/opt/dockron/utils/container_restart.tcl
+        "
+      -verbose DEBUG
