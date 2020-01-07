@@ -632,7 +632,6 @@ proc ::execute { ptn type cmd args lst what } {
     } else {
         foreach {id name} [find $ptn $type $lst] {
             if { $id ne "" } {
-        docker log INFO "calling back $id  $cmd $args" $appname
                 cmdexec $cmd $args $what $id $name $ptn
             }
         }        
