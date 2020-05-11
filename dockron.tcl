@@ -837,6 +837,7 @@ proc ::check {} {
     set elapsed [expr {[clock milliseconds]-$start_ms}]
     set next [expr {(1000*$every)-$elapsed}]
     if { $next < 0 } {
+        docker log NOTICE "Running $next ms. late, you might be missing pulses"
         set next 0
     }
     docker log DEBUG "Entities collection and rule checking took $elapsed ms, next check in $next ms" $appname
