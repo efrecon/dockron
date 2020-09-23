@@ -38,5 +38,5 @@ COPY tockler/*.tcl /opt/dockron/tockler/
 # Export where we will look for the Docker UNIX socket.
 VOLUME ["/tmp/docker.sock"]
 
-ENTRYPOINT ["tini", --, "tclsh8.6", "/opt/dockron/dockron.tcl", "-docker", "unix:///tmp/docker.sock"]
+ENTRYPOINT ["tini", "--", "tclsh8.6", "/opt/dockron/dockron.tcl", "-docker", "unix:///tmp/docker.sock"]
 CMD ["-verbose", "4"]
