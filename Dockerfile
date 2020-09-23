@@ -13,7 +13,7 @@ LABEL org.label-schema.docker.cmd="docker run --rm -it -v /var/run/docker.sock:/
 # is to ease talking to the daemon using the regular command-line interface (as
 # opposed to the API))
 ARG GLIBC_VER="2.30-r0"
-RUN apk add --update --no-cache ca-certificates curl tinit && \
+RUN apk add --update --no-cache ca-certificates curl && \
   ALPINE_GLIBC_REPO="https://github.com/sgerrand/alpine-pkg-glibc/releases/download" && \
   curl -Ls https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub && \
   curl -Ls ${ALPINE_GLIBC_REPO}/${GLIBC_VER}/glibc-${GLIBC_VER}.apk > /tmp/${GLIBC_VER}.apk && \
@@ -28,7 +28,7 @@ RUN sed -i s/lib64/lib/ /usr/glibc-compat/bin/ldd
 
 # Ensure we have socat since nc on busybox does not support UNIX
 # domain sockets.
-RUN apk add --no-cache socat
+RUN apk add --no-cache socat tini
 
 # COPY code
 COPY *.md /opt/dockron/
