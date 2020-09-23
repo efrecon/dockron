@@ -13,7 +13,7 @@ LABEL org.label-schema.docker.cmd="docker run --rm -it -v /var/run/docker.sock:/
 # is to ease talking to the daemon using the regular command-line interface (as
 # opposed to the API))
 ARG GLIBC_VER="2.30-r0"
-RUN apk add --update --no-cache ca-certificates curl && \
+RUN apk add --update --no-cache ca-certificates curl tinit && \
   ALPINE_GLIBC_REPO="https://github.com/sgerrand/alpine-pkg-glibc/releases/download" && \
   curl -Ls https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub && \
   curl -Ls ${ALPINE_GLIBC_REPO}/${GLIBC_VER}/glibc-${GLIBC_VER}.apk > /tmp/${GLIBC_VER}.apk && \
@@ -38,5 +38,5 @@ COPY tockler/*.tcl /opt/dockron/tockler/
 # Export where we will look for the Docker UNIX socket.
 VOLUME ["/tmp/docker.sock"]
 
-ENTRYPOINT ["tclsh8.6", "/opt/dockron/dockron.tcl", "-docker", "unix:///tmp/docker.sock"]
+ENTRYPOINT ["tinit", --, "tclsh8.6", "/opt/dockron/dockron.tcl", "-docker", "unix:///tmp/docker.sock"]
 CMD ["-verbose", "4"]
